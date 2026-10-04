@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Snackbar } from "@mui/material";
 import { LoaderCircle, Mic, MicOff, Sparkles } from "lucide-react";
@@ -25,6 +25,8 @@ export default function BrainDumpComposer() {
   const [recording, setRecording] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null);
   const recognition = useRef<SpeechRecognition | null>(null);
+
+  useEffect(() => () => recognition.current?.abort(), []);
 
   const extract = async () => {
     if (!text.trim() || loading) return;
@@ -60,16 +62,22 @@ export default function BrainDumpComposer() {
     const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognitionClass) { setMessage({ type: "info", text: "Voice input isn’t supported in this browser yet." }); return; }
     const instance = new SpeechRecognitionClass();
-    instance.continuous = true; instance.interimResults = true; instance.lang = navigator.language;
+    instance.continuous = false; instance.interimResults = true; instance.lang = navigator.language || "en-US";
     const base = text.trim();
     instance.onresult = (event) => {
       let transcript = "";
       for (let i = 0; i < event.results.length; i += 1) transcript += event.results[i][0].transcript;
       setText(`${base}${base ? " " : ""}${transcript}`.slice(0, 5000));
     };
-    instance.onerror = () => setMessage({ type: "error", text: "I couldn’t hear that clearly. You can keep typing instead." });
-    instance.onend = () => setRecording(false);
-    recognition.current = instance; instance.start(); setRecording(true);
+    instance.onerror = (event) => {
+      setRecording(false);
+      const denied = event.error === "not-allowed" || event.error === "service-not-allowed";
+      setMessage({ type: denied ? "info" : "error", text: denied ? "Microphone access is blocked. Allow it in this site’s browser settings, then try again." : event.error === "no-speech" ? "I didn’t hear anything. Tap Speak when you’re ready and try again." : "Voice input had trouble starting. You can keep typing instead." });
+    };
+    instance.onend = () => { setRecording(false); recognition.current = null; };
+    recognition.current = instance;
+    try { instance.start(); setRecording(true); }
+    catch { recognition.current = null; setMessage({ type: "error", text: "Voice input couldn’t start. Wait a moment and try again." }); }
   };
 
   if (drafts) return <><ExtractionPreview drafts={drafts} mode={mode} saving={saving} onChange={setDrafts} onBack={() => setDrafts(null)} onSave={save} /><Snackbar open={!!message} autoHideDuration={4500} onClose={() => setMessage(null)}><Alert severity={message?.type}>{message?.text}</Alert></Snackbar></>;

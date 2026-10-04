@@ -12,6 +12,7 @@ import CommitmentTimeline from "@/components/commitments/CommitmentTimeline";
 export default function DayPage() {
   const { items, loading, error, update, remove } = useCommitments();
   const [voiceReady, setVoiceReady] = useState(false);
+  const [cloudVoiceReady, setCloudVoiceReady] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const today = format(new Date(), "yyyy-MM-dd");
@@ -22,16 +23,43 @@ export default function DayPage() {
   const nextEvent = [...todaysItems].filter((item) => item.type === "event" && item.time && !item.completed).sort((a, b) => a.time!.localeCompare(b.time!))[0];
   const summary = todaysItems.length === 0 ? "Your day is clear." : `You have ${todaysItems.length} ${todaysItems.length === 1 ? "thing" : "things"} today.${top ? ` ${top.title} is your most important commitment.` : ""}${nextEvent ? ` ${nextEvent.title} starts at ${formatTime(nextEvent.time)}.` : ""}`;
 
-  useEffect(() => { fetch("/api/voice/briefing").then((r) => r.json()).then((data) => setVoiceReady(Boolean(data.configured))).catch(() => undefined); }, []);
+  useEffect(() => {
+    const deviceVoiceReady = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+    const readinessTimer = window.setTimeout(() => setVoiceReady(deviceVoiceReady), 0);
+    fetch("/api/voice/briefing").then((r) => r.json()).then((data) => {
+      const configured = Boolean(data.configured);
+      setCloudVoiceReady(configured);
+      setVoiceReady(configured || deviceVoiceReady);
+    }).catch(() => setVoiceReady(deviceVoiceReady));
+    return () => { window.clearTimeout(readinessTimer); window.speechSynthesis?.cancel(); };
+  }, []);
+
+  const speakWithDevice = () => {
+    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) throw new Error("Device speech is unavailable");
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(summary);
+    utterance.lang = navigator.language || "en-US";
+    utterance.rate = 0.96;
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => { setSpeaking(false); setMessage("Voice briefing is unavailable right now."); };
+    window.speechSynthesis.speak(utterance);
+  };
+
   const speak = async () => {
     setSpeaking(true);
     try {
+      if (!cloudVoiceReady) { speakWithDevice(); return; }
       const response = await fetch("/api/voice/briefing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: summary }) });
       if (!response.ok) throw new Error();
-      const audio = new Audio(URL.createObjectURL(await response.blob()));
-      audio.onended = () => setSpeaking(false);
+      const audioUrl = URL.createObjectURL(await response.blob());
+      const audio = new Audio(audioUrl);
+      audio.onended = () => { URL.revokeObjectURL(audioUrl); setSpeaking(false); };
+      audio.onerror = () => { URL.revokeObjectURL(audioUrl); try { speakWithDevice(); } catch { setSpeaking(false); setMessage("Voice briefing is unavailable right now."); } };
       await audio.play();
-    } catch { setSpeaking(false); setMessage("Voice briefing is unavailable right now."); }
+    } catch {
+      try { speakWithDevice(); }
+      catch { setSpeaking(false); setMessage("Voice briefing is unavailable right now."); }
+    }
   };
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
