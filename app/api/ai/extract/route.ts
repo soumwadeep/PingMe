@@ -6,7 +6,9 @@ export const runtime = "nodejs";
 
 export async function GET() {
   return NextResponse.json({
-    configured: Boolean(process.env.AI_BASE_URL && process.env.AI_API_KEY && process.env.AI_MODEL),
+    configured: Boolean(
+      process.env.AI_BASE_URL && process.env.AI_API_KEY && process.env.AI_MODEL,
+    ),
     provider: process.env.AI_PROVIDER || "demo",
   });
 }

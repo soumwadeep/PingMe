@@ -1,14 +1,28 @@
 import { addDays, format, getDay, parseISO } from "date-fns";
-import type { CommitmentDraft, CommitmentType, ExtractionContext } from "@/types/commitment";
+import type {
+  CommitmentDraft,
+  CommitmentType,
+  ExtractionContext,
+} from "@/types/commitment";
 
-const weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+const weekdays = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
 
 function resolveDate(text: string, context: ExtractionContext) {
   const base = parseISO(context.currentDate);
   const lower = text.toLowerCase();
   if (/\btomorrow\b/.test(lower)) return format(addDays(base, 1), "yyyy-MM-dd");
   if (/\btoday\b|\btonight\b/.test(lower)) return context.currentDate;
-  const weekday = weekdays.findIndex((day) => new RegExp(`\\b${day}\\b`, "i").test(lower));
+  const weekday = weekdays.findIndex((day) =>
+    new RegExp(`\\b${day}\\b`, "i").test(lower),
+  );
   if (weekday >= 0) {
     let delta = (weekday - getDay(base) + 7) % 7;
     if (delta === 0) delta = 7;
@@ -20,7 +34,9 @@ function resolveDate(text: string, context: ExtractionContext) {
 
 function resolveTime(text: string) {
   const lower = text.toLowerCase();
-  const match = lower.match(/\b(?:at\s*)?(1[0-2]|0?[1-9])(?::([0-5]\d))?\s*(am|pm)\b|\b(?:at\s*)?([01]?\d|2[0-3]):([0-5]\d)\b/);
+  const match = lower.match(
+    /\b(?:at\s*)?(1[0-2]|0?[1-9])(?::([0-5]\d))?\s*(am|pm)\b|\b(?:at\s*)?([01]?\d|2[0-3]):([0-5]\d)\b/,
+  );
   if (match) {
     if (match[4]) return `${match[4].padStart(2, "0")}:${match[5]}`;
     let hour = Number(match[1]);
@@ -43,7 +59,10 @@ function resolveTime(text: string) {
 
 function cleanTitle(text: string) {
   const withoutTiming = text
-    .replace(/\b(?:today|tomorrow|tonight|this (?:morning|afternoon|evening)|(?:on |by |before )?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/gi, "")
+    .replace(
+      /\b(?:today|tomorrow|tonight|this (?:morning|afternoon|evening)|(?:on |by |before )?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/gi,
+      "",
+    )
     .replace(/\b(?:at\s*)?(?:1[0-2]|0?[1-9])(?::[0-5]\d)?\s*(?:am|pm)\b/gi, "")
     .replace(/\bat\s*(?:1[0-2]|0?[1-9])\b/gi, "")
     .replace(/\b(?:in the )?(?:morning|afternoon|evening)\b/gi, "")
@@ -51,7 +70,10 @@ function cleanTitle(text: string) {
     .replace(/^[,.;:\s]+|[,.;:\s]+$/g, "")
     .trim();
   return withoutTiming
-    .replace(/^(and\s+)?(?:please\s+)?(?:remind me(?:\s+to)?|i need to|need to|remember to|don't let me forget to)\s*/i, "")
+    .replace(
+      /^(and\s+)?(?:please\s+)?(?:remind me(?:\s+to)?|i need to|need to|remember to|don't let me forget to)\s*/i,
+      "",
+    )
     .replace(/^my\s+/i, "")
     .replace(/\s+is$/i, "")
     .trim();
@@ -59,14 +81,18 @@ function cleanTitle(text: string) {
 
 function inferType(text: string): CommitmentType {
   const lower = text.toLowerCase();
-  if (/interview|meeting|appointment|call with|event/.test(lower)) return "event";
+  if (/interview|meeting|appointment|call with|event/.test(lower))
+    return "event";
   if (/\bby\b|\bbefore\b|deadline|due/.test(lower)) return "deadline";
   if (/remind me/.test(lower)) return "reminder";
   if (/note that|remember that/.test(lower)) return "note";
   return "task";
 }
 
-export function parseCommitmentsFallback(text: string, context: ExtractionContext): CommitmentDraft[] {
+export function parseCommitmentsFallback(
+  text: string,
+  context: ExtractionContext,
+): CommitmentDraft[] {
   const sharedDate = resolveDate(text, context);
   const clauses = text
     .replace(/\.(?=\s+[A-Z])/g, "|")
@@ -82,7 +108,9 @@ export function parseCommitmentsFallback(text: string, context: ExtractionContex
     date: resolveDate(clause, context) ?? sharedDate,
     time: resolveTime(clause),
     endTime: null,
-    priority: /\burgent\b|\bimportant\b|\basap\b|interview/i.test(clause) ? "high" : "medium",
+    priority: /\burgent\b|\bimportant\b|\basap\b|interview/i.test(clause)
+      ? "high"
+      : "medium",
     reminderAt: null,
     sourceText: text,
   }));

@@ -13,9 +13,20 @@ const links = [
 
 export default function MobileNavigation() {
   const pathname = usePathname();
-  return <nav className="mobileNav" aria-label="Mobile navigation">
-    {links.map(({ href, label, Icon, primary }) => <Link href={href} key={href} className={`${pathname === href ? "active" : ""} ${primary ? "capture" : ""}`}>
-      <span><Icon size={primary ? 22 : 20} /></span><small>{label}</small>
-    </Link>)}
-  </nav>;
+  return (
+    <nav className="mobileNav" aria-label="Mobile navigation">
+      {links.map(({ href, label, Icon, primary }) => (
+        <Link
+          href={href}
+          key={href}
+          className={`${pathname === href ? "active" : ""} ${primary ? "capture" : ""}`}
+        >
+          <span>
+            <Icon size={primary ? 22 : 20} />
+          </span>
+          <small>{label}</small>
+        </Link>
+      ))}
+    </nav>
+  );
 }

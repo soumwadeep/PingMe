@@ -1,13 +1,20 @@
 export function notificationState(): NotificationPermission | "unsupported" {
-  if (typeof window === "undefined" || !window.isSecureContext || !("Notification" in window)) return "unsupported";
+  if (
+    typeof window === "undefined" ||
+    !window.isSecureContext ||
+    !("Notification" in window)
+  )
+    return "unsupported";
   return Notification.permission;
 }
 export async function enableNotifications() {
-  if (!window.isSecureContext || !("Notification" in window)) return "unsupported" as const;
+  if (!window.isSecureContext || !("Notification" in window))
+    return "unsupported" as const;
   return Notification.requestPermission();
 }
 export async function testNotification() {
-  if (!("Notification" in window) || Notification.permission !== "granted") throw new Error("Notifications are not enabled.");
+  if (!("Notification" in window) || Notification.permission !== "granted")
+    throw new Error("Notifications are not enabled.");
 
   const options: NotificationOptions = {
     body: "We’ll help keep what matters close.",

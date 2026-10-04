@@ -1,13 +1,28 @@
 import { z } from "zod";
 import { format, isValid, parseISO } from "date-fns";
 
-export const commitmentTypeSchema = z.enum(["task", "event", "reminder", "deadline", "note"]);
+export const commitmentTypeSchema = z.enum([
+  "task",
+  "event",
+  "reminder",
+  "deadline",
+  "note",
+]);
 export const commitmentPrioritySchema = z.enum(["low", "medium", "high"]);
-const nullableDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
-  const parsed = parseISO(value);
-  return isValid(parsed) && format(parsed, "yyyy-MM-dd") === value;
-}, "Invalid calendar date").nullable().optional();
-const nullableTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().optional();
+const nullableDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((value) => {
+    const parsed = parseISO(value);
+    return isValid(parsed) && format(parsed, "yyyy-MM-dd") === value;
+  }, "Invalid calendar date")
+  .nullable()
+  .optional();
+const nullableTime = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+  .nullable()
+  .optional();
 
 export const commitmentDraftSchema = z.object({
   id: z.string().min(1).optional(),

@@ -1,4 +1,10 @@
-export const commitmentTypes = ["task", "event", "reminder", "deadline", "note"] as const;
+export const commitmentTypes = [
+  "task",
+  "event",
+  "reminder",
+  "deadline",
+  "note",
+] as const;
 export const commitmentPriorities = ["low", "medium", "high"] as const;
 
 export type CommitmentType = (typeof commitmentTypes)[number];
